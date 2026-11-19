@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solicitation Browser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f5f6f8; --panel:#fff; --ink:#111827; --ink2:#374151; --muted:#6b7280; --faint:#9ca3af;
+    --line:#e5e7eb; --line2:#f0f1f3; --accent:#2457d6; --accent-soft:#eef3ff;
+    --good:#047857; --good-soft:#e7f7ef; --warn:#b45309; --warn-soft:#fff6e5; --hot:#c0262d; --hot-soft:#fdecec;
+    --violet:#6d28d9; --violet-soft:#f3edff; --shadow:0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; }
+  body { font:14px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; }
+  a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
+  button { font:inherit; cursor:pointer; }
+
+  /* Header */
+  header { position:sticky; top:0; z-index:20; background:rgba(255,255,255,.92); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+  .bar { display:flex; align-items:center; gap:14px; padding:12px 20px; }
+  .brand { display:flex; align-items:center; gap:10px; white-space:nowrap; }
+  .logo { width:30px; height:30px; border-radius:8px; background:linear-gradient(135deg,#2457d6,#5b8cff); display:grid; place-items:center; color:#fff; font-weight:700; font-size:14px; }
+  .brand h1 { font-size:15px; margin:0; font-weight:700; }
+  .brand .meta { color:var(--muted); font-size:12px; }
+  .searchwrap { flex:1; position:relative; max-width:620px; }
+  .searchwrap svg { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--faint); }
+  #q { width:100%; padding:10px 12px 10px 36px; border:1px solid var(--line); border-radius:10px; font:inherit; background:#fff; outline:none; transition:border-color .15s, box-shadow .15s; }
+  #q:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .tabs { display:flex; background:var(--line2); padding:3px; border-radius:10px; gap:2px; }
+  .tabs button { border:0; background:transparent; padding:6px 12px; border-radius:8px; font-size:13px; font-weight:500; color:var(--ink2); white-space:nowrap; }
+  .tabs button.on { background:#fff; color:var(--ink); box-shadow:var(--shadow); }
+  .tabs .n { color:var(--muted); font-weight:400; margin-left:3px; }
+  .ghost { border:1px solid var(--line); background:#fff; border-radius:8px; padding:7px 11px; font-size:13px; color:var(--ink2); white-space:nowrap; }
+  .ghost:hover { border-color:#cbd0d8; }
+
+  /* Layout */
+  main { display:grid; grid-template-columns:300px minmax(0,1fr); gap:18px; padding:18px 20px 40px; }
+  aside { position:sticky; top:72px; align-self:start; max-height:calc(100vh - 88px); overflow:auto; padding-right:4px; display:flex; flex-direction:column; gap:10px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); }
+  .facet > summary { list-style:none; display:flex; align-items:center; gap:8px; padding:11px 12px; cursor:pointer; font-size:13px; font-weight:600; user-select:none; }
+  .facet > summary::-webkit-details-marker { display:none; }
+  .facet > summary .chev { margin-left:auto; color:var(--faint); transition:transform .15s; }
+  .facet[open] > summary .chev { transform:rotate(90deg); }
+  .facet .selcount { background:var(--accent); color:#fff; border-radius:999px; font-size:11px; padding:0 7px; font-weight:600; }
+  .facet .clr { color:var(--accent); font-size:12px; font-weight:500; }
+  .fbody { padding:0 12px 12px; }
+  .fsearch { width:100%; padding:7px 9px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:13px; margin-bottom:6px; outline:none; }
+  .fsearch:focus { border-color:var(--accent); }
+  .azwrap { display:flex; gap:6px; }
+  .az { display:flex; flex-direction:column; font-size:10px; line-height:1.35; color:var(--faint); user-select:none; }
+  .az span { cursor:default; padding:0 2px; text-align:center; }
+  .az span.has { color:var(--accent); cursor:pointer; font-weight:600; }
+  .optlist { max-height:250px; overflow:auto; flex:1; }
+  .opt { display:flex; align-items:center; gap:8px; padding:4px 4px; font-size:13px; border-radius:6px; cursor:pointer; color:var(--ink2); }
+  .opt:hover { background:var(--line2); }
+  .opt input { accent-color:var(--accent); margin:0; }
+  .opt .lbl { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  .opt .n { color:var(--faint); font-size:12px; font-variant-numeric:tabular-nums; }
+  .opt .add { opacity:0; border:0; background:var(--accent-soft); color:var(--accent); border-radius:5px; font-size:11px; padding:0 5px; }
+  .opt:hover .add { opacity:1; }
+  .opt.zero { opacity:.45; }
+  .quick { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px; }
+  .quick button { border:1px solid var(--line); background:#fff; border-radius:999px; padding:3px 10px; font-size:12px; color:var(--ink2); }
+  .quick button.on { background:var(--ink); border-color:var(--ink); color:#fff; }
+
+  /* Shop */
+  .shop { padding:12px; }
+  .shop h2 { font-size:13px; margin:0 0 2px; display:flex; align-items:center; gap:6px; }
+  .shop p.hint { margin:0 0 8px; font-size:12px; color:var(--muted); }
+  .shop label { display:block; font-size:12px; color:var(--muted); margin:9px 0 4px; font-weight:500; }
+  .shop input, .shop textarea { width:100%; border:1px solid var(--line); border-radius:8px; padding:7px 9px; font:inherit; font-size:13px; outline:none; resize:vertical; }
+  .shop input:focus, .shop textarea:focus { border-color:var(--accent); }
+  .chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+  .chip { display:inline-flex; align-items:center; gap:4px; background:var(--accent-soft); color:var(--accent); border-radius:999px; padding:2px 4px 2px 9px; font-size:12px; }
+  .chip button { border:0; background:transparent; color:inherit; padding:0 4px; font-size:13px; line-height:1; }
+
+  /* Stats */
+  .stats { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; margin-bottom:12px; }
+  .stat { padding:12px 14px; text-align:left; border:1px solid var(--line); background:#fff; border-radius:12px; box-shadow:var(--shadow); transition:border-color .15s, transform .15s; }
+  .stat:hover { border-color:#cbd0d8; transform:translateY(-1px); }
+  .stat b { display:block; font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .stat span { color:var(--muted); font-size:12px; }
+  .stat.hl b { color:var(--accent); }
+
+  /* Toolbar + active chips */
+  .toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .toolbar .count { font-weight:600; margin-right:4px; }
+  .toolbar .spacer { flex:1; }
+  .toolbar select { border:1px solid var(--line); border-radius:8px; padding:6px 8px; font:inherit; font-size:13px; background:#fff; }
+  .achip { display:inline-flex; align-items:center; gap:4px; background:#fff; border:1px solid var(--line); border-radius:999px; padding:3px 4px 3px 10px; font-size:12px; color:var(--ink2); }
+  .achip b { font-weight:600; color:var(--muted); }
+  .achip button { border:0; background:var(--line2); border-radius:999px; width:18px; height:18px; line-height:16px; padding:0; color:var(--muted); }
+  .clearall { border:0; background:transparent; color:var(--accent); font-size:12px; font-weight:500; }
+
+  /* Table */
+  .tablewrap { background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); overflow:clip; }
+  table { width:100%; border-collapse:collapse; }
+  thead th { position:sticky; top:var(--hh, 62px); z-index:2; text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600; padding:10px 12px; border-bottom:1px solid var(--line); background:#fafbfc; white-space:nowrap; }
+  thead th[data-s] { cursor:pointer; } thead th[data-s]:hover { color:var(--ink); }
+  tbody td { padding:11px 12px; border-bottom:1px solid var(--line2); vertical-align:top; }
+  tbody tr { cursor:pointer; transition:background .1s; }
+  tbody tr:hover td { background:#f8faff; }
+  tbody tr.passed td { opacity:.45; }
+  .item { font-weight:600; color:var(--ink); }
+  .sub { color:var(--muted); font-size:12px; }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; }
+  .badge { display:inline-block; border-radius:6px; padding:1px 7px; font-size:11px; font-weight:600; white-space:nowrap; margin:0 3px 3px 0; }
+  .b-nsn { background:var(--good-soft); color:var(--good); }
+  .b-fsc { background:var(--accent-soft); color:var(--accent); }
+  .b-kw { background:var(--warn-soft); color:var(--warn); }
+  .b-sb { background:var(--violet-soft); color:var(--violet); }
+  .b-new { background:#ecfeff; color:#0e7490; }
+  .b-grey { background:var(--line2); color:var(--ink2); }
+  .due { font-weight:600; font-variant-numeric:tabular-nums; }
+  .due.hot { color:var(--hot); } .due.warn { color:var(--warn); }
+  .acts { white-space:nowrap; text-align:right; }
+  .iconbtn { border:1px solid transparent; background:transparent; border-radius:7px; width:28px; height:28px; color:var(--faint); font-size:15px; line-height:1; }
+  .iconbtn:hover { border-color:var(--line); background:#fff; color:var(--ink2); }
+  .iconbtn.on.star { color:#d97706; }
+  .iconbtn.on.pass { color:var(--hot); }
+  .empty { padding:56px 20px; text-align:center; color:var(--muted); }
+  .empty h3 { color:var(--ink); margin:0 0 6px; font-size:16px; }
+  .more { margin:14px auto; display:block; padding:8px 18px; }
+
+  /* Drawer */
+  .scrim { position:fixed; inset:0; background:rgba(17,24,39,.25); opacity:0; pointer-events:none; transition:opacity .2s; z-index:40; }
+  .drawer { position:fixed; top:0; right:0; bottom:0; width:min(460px,100vw); background:#fff; box-shadow:-8px 0 30px rgba(16,24,40,.12); transform:translateX(100%); transition:transform .22s cubic-bezier(.2,.8,.2,1); z-index:41; overflow:auto; }
+  body.drawer-open .scrim { opacity:1; pointer-events:auto; }
+  body.drawer-open .drawer { transform:none; }
+  .dhead { padding:18px 20px; border-bottom:1px solid var(--line); position:sticky; top:0; background:#fff; }
+  .dhead h2 { margin:4px 0 6px; font-size:18px; }
+  .dclose { position:absolute; right:14px; top:14px; }
+  .dbody { padding:16px 20px 30px; }
+  .kv { display:grid; grid-template-columns:130px 1fr; gap:8px 12px; font-size:13px; margin-bottom:18px; }
+  .kv dt { color:var(--muted); } .kv dd { margin:0; }
+  .primary { display:inline-flex; align-items:center; gap:6px; background:var(--accent); color:#fff; border:0; border-radius:9px; padding:9px 14px; font-weight:600; font-size:13px; }
+  .primary:hover { text-decoration:none; filter:brightness(1.07); }
+  .dbtns { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 18px; }
+  .dsec { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600; margin:18px 0 8px; }
+  .sib { display:flex; justify-content:space-between; padding:8px 10px; border:1px solid var(--line); border-radius:8px; margin-bottom:6px; font-size:13px; }
+
+  @media (max-width: 1100px) { .stats { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  @media (max-width: 900px) {
+    main { grid-template-columns:1fr; }
+    aside { position:static; max-height:none; }
+    .bar { flex-wrap:wrap; }
+    .col-hide { display:none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><div class="logo">SB</div><div><h1>Solicitation Browser</h1><div class="meta" id="meta">Loading DIBBS data…</div></div></div>
+    <div class="searchwrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" placeholder="Search item, NSN or solicitation · every word must match · -word to exclude" autocomplete="off">
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <button class="ghost" id="csv" title="Download the rows in this view">Export CSV</button>
+  </div>
+</header>
+
+<main>
+  <aside id="aside">
+    <div class="card shop">
+      <h2>🏭 My shop</h2>
+      <p class="hint">Tell us what you supply. Matches rise to the top with the reason shown.</p>
+      <label>Categories (FSC, first 4 digits of the NSN)</label>
+      <input id="shopFsc" placeholder="e.g. 5330, 4730">
+      <div class="chips" id="fscChips"></div>
+      <label>Part numbers you've supplied (NSNs)</label>
+      <textarea id="shopNsn" rows="2" placeholder="One per line, dashes optional"></textarea>
+      <label>Keywords in the item name</label>
+      <input id="shopKw" placeholder="e.g. gasket, valve">
+    </div>
+    <div id="facets"></div>
+  </aside>
+
+  <section>
+    <div class="stats" id="stats"></div>
+    <div class="toolbar" id="toolbar"></div>
+    <div class="tablewrap" id="results"></div>
+  </section>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<div class="drawer" id="drawer"></div>
+
+<script>
+/* ---------- Reference data ---------- */
+const FSG = {"10":"Weapons","11":"Nuclear Ordnance","12":"Fire Control Equipment","13":"Ammunition and Explosives","14":"Guided Missiles","15":"Aircraft and Airframe Structural Components","16":"Aircraft Components and Accessories","17":"Aircraft Launching, Landing, Ground Handling","18":"Space Vehicles","19":"Ships, Small Craft, Pontoons, Floating Docks","20":"Ship and Marine Equipment","22":"Railway Equipment","23":"Motor Vehicles, Trailers, Cycles","24":"Tractors","25":"Vehicular Equipment Components","26":"Tires and Tubes","28":"Engines, Turbines, and Components","29":"Engine Accessories","30":"Mechanical Power Transmission Equipment","31":"Bearings","32":"Woodworking Machinery","34":"Metalworking Machinery","35":"Service and Trade Equipment","36":"Special Industry Machinery","37":"Agricultural Machinery","38":"Construction, Mining, Excavating Equipment","39":"Materials Handling Equipment","40":"Rope, Cable, Chain, and Fittings","41":"Refrigeration, Air Conditioning, Air Circulating","42":"Fire Fighting, Rescue, and Safety Equipment","43":"Pumps and Compressors","44":"Furnace, Steam Plant, Drying Equipment","45":"Plumbing, Heating, Waste Disposal","46":"Water Purification, Sewage Treatment","47":"Pipe, Tubing, Hose, and Fittings","48":"Valves","49":"Maintenance and Repair Shop Equipment","51":"Hand Tools","52":"Measuring Tools","53":"Hardware and Abrasives","54":"Prefabricated Structures and Scaffolding","55":"Lumber, Millwork, Plywood","56":"Construction and Building Materials","58":"Communication, Detection, Coherent Radiation","59":"Electrical and Electronic Components","60":"Fiber Optics","61":"Electric Wire, Power Distribution","62":"Lighting Fixtures and Lamps","63":"Alarm, Signal, Security Detection","65":"Medical, Dental, Veterinary","66":"Instruments and Laboratory Equipment","67":"Photographic Equipment","68":"Chemicals and Chemical Products","69":"Training Aids and Devices","70":"IT Equipment and Software","71":"Furniture","72":"Household and Commercial Furnishings","73":"Food Preparation and Serving Equipment","74":"Office Machines","75":"Office Supplies and Devices","76":"Books, Maps, Publications","77":"Musical Instruments, Radios","78":"Recreational and Athletic Equipment","79":"Cleaning Equipment and Supplies","80":"Brushes, Paints, Sealers, Adhesives","81":"Containers, Packaging, Packing Supplies","83":"Textiles, Leather, Tents, Flags","84":"Clothing, Individual Equipment, Insignia","85":"Toiletries","87":"Agricultural Supplies","88":"Live Animals","89":"Subsistence (Food)","91":"Fuels, Lubricants, Oils, Waxes","93":"Nonmetallic Fabricated Materials","94":"Nonmetallic Crude Materials","95":"Metal Bars, Sheets, and Shapes","96":"Ores, Minerals","99":"Miscellaneous"};
+// Buying office from the solicitation prefix (first 5 characters).
+const OFFICES = {SPE1C:"DLA Troop Support · Clothing & Textiles",SPE2D:"DLA Troop Support · Medical",SPE3S:"DLA Troop Support · Subsistence",SPE8E:"DLA Troop Support · Construction & Equipment",SPE4A:"DLA Aviation · Richmond",SPE7L:"DLA Land and Maritime · Columbus",SPE7M:"DLA Land and Maritime · Columbus",SPRRA:"DLA Aviation · Redstone",SPRPA:"DLA Aviation · Philadelphia",SPRTA:"DLA Aviation · Oklahoma City",SPRHA:"DLA Aviation · Ogden",SPRDL:"DLA Land · Warren",SPRMM:"DLA Maritime · Mechanicsburg"};
+const SOL_TYPES = {T:"T · automated", Q:"Q · manual RFQ", U:"U"};
+const ORIGIN = {"00":"United States","01":"United States","12":"Germany","14":"France","15":"Italy","17":"Netherlands","21":"Canada","66":"Australia","99":"United Kingdom"};
+const QTY_BUCKETS = [[1,1,"1"],[2,10,"2–10"],[11,50,"11–50"],[51,250,"51–250"],[251,1000,"251–1,000"],[1001,Infinity,"1,000+"]];
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+/* ---------- Helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const parseD = s => { const [m,d,y] = s.split("-").map(Number); return new Date(y, m-1, d); };
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+const nice = s => { if (!s) return ""; const d = parseD(s); return MON[d.getMonth()] + " " + d.getDate(); };
+const store = { get(k, f) { try { return JSON.parse(localStorage.getItem(k)) ?? f; } catch(e) { return f; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} } };
+
+/* ---------- State ---------- */
+let DATA = [], LATEST = "", MULTI = false, view = "for", sortKey = "fit", shown = 100, dueQuick = null, openKey = null;
+const sel = {};                                    // facet key -> Set of selected values
+const starred = new Set(store.get("starred", []));
+const passed = new Set(store.get("passed", []));
+const shop = { fsc:[], nsn:[], kw:[] };
+
+/* ---------- Enrich each row once ---------- */
+function enrich(r, nsnCount) {
+  const digits = r.nsn.replace(/\D/g, "");
+  const g = r.fsc ? r.fsc.slice(0,2) : "";
+  const days = Math.round((parseD(r.return_by) - TODAY) / 864e5);
+  const pre = r.solicitation.slice(0,5);
+  const t = r.solicitation.charAt(10);
+  const qb = r.qty == null ? "Not stated" : QTY_BUCKETS.find(([lo,hi]) => r.qty >= lo && r.qty <= hi)[2];
+  const ncb = r.fsc ? digits.slice(4,6) : "";
+  const flags = [];
+  if (r.fast_award) flags.push("Fast Award candidate");
+  if (r.milspec) flags.push("Mil-Spec");
+  if (r.tech_docs_url) flags.push("Tech docs attached");
+  if (nsnCount[digits] > 1) flags.push("Same NSN on several solicitations");
+  if (MULTI && r.issued === LATEST) flags.push("New in latest issue");
+  return { ...r, _key: r.solicitation + "|" + r.nsn, _digits: digits,
+    _group: g ? g + " · " + (FSG[g] || "Other") : "No NSN (part number only)",
+    _fscLabel: r.fsc || "No NSN",
+    _noun: (r.nomenclature.split(",")[0] || "").trim() || "Unnamed",
+    _office: OFFICES[pre] || ("Other office (" + r.solicitation.slice(0,6) + ")"),
+    _type: SOL_TYPES[t] || (t || "?"),
+    _days: days, _qtyB: qb,
+    _origin: !r.fsc ? "Unknown" : (ORIGIN[ncb] || ("Other country (code " + ncb + ")")),
+    _flags: flags,
+    _hay: (r.nomenclature + " " + r.nsn + " " + digits + " " + r.solicitation + " " + r.solicitation.replace(/-/g,"") + " " + r.purchase_request).toLowerCase() };
+}
+
+/* ---------- Facets (every option listed, live counts, MDP-style) ---------- */
+const FACETS = [
+  { key:"noun",   title:"Item type",         val:r => r._noun,   search:true, az:true, order:"alpha", open:true },
+  { key:"group",  title:"Category group",    val:r => r._group,  search:true, order:"count", open:true },
+  { key:"fsc",    title:"FSC class",         val:r => r._fscLabel, search:true, order:"count", addToShop:true,
+    label:v => v === "No NSN" ? v : v + " · " + (FSG[v.slice(0,2)] || "") },
+  { key:"due",    title:"Return by",         val:r => r.return_by, order:"date", quick:true, open:true,
+    label:v => { const d = Math.round((parseD(v) - TODAY)/864e5); return nice(v) + " · " + (d < 0 ? "closed" : d === 0 ? "today" : d + (d === 1 ? " day" : " days")); } },
+  { key:"setaside", title:"Set-aside",       val:r => r.set_aside || "Not stated", order:"count", open:true },
+  { key:"flags",  title:"Highlights",        val:r => r._flags, order:"count", mode:"all", open:true },
+  { key:"office", title:"Buying office",     val:r => r._office, order:"count" },
+  { key:"qty",    title:"Quantity",          val:r => r._qtyB, order:QTY_BUCKETS.map(b => b[2]).concat("Not stated") },
+  { key:"type",   title:"Solicitation type", val:r => r._type, order:"count" },
+  { key:"issued", title:"Issued",            val:r => r.issued, order:"datedesc", label:v => nice(v) + (v === LATEST ? " · latest" : "") },
+  { key:"origin", title:"Part origin (NSN country code)", val:r => r._origin, order:"count" },
+  { key:"status", title:"Status",            val:r => r.status || "Unknown", order:"count" },
+];
+FACETS.forEach(f => sel[f.key] = new Set());
+const facetOpen = store.get("facetOpen", {});
+
+function valuesOf(f, r) { const v = f.val(r); return Array.isArray(v) ? v : [v]; }
+
+function passes(r, skipKey) {
+  if (view === "for" && r._fit.score === 0) return false;
+  if (view === "star" && !starred.has(r._key)) return false;
+  if (view !== "star" && view !== "passed" && passed.has(r._key)) return false;
+  if (view === "passed" && !passed.has(r._key)) return false;
+  const words = $("q").value.toLowerCase().split(/\s+/).filter(Boolean);
+  for (const w of words) {
+    if (w.startsWith("-") && w.length > 1) { if (r._hay.includes(w.slice(1))) return false; }
+    else if (!r._hay.includes(w.replace(/-/g, "")) && !r._hay.includes(w)) return false;
+  }
+  if (skipKey !== "due" && dueQuick != null && r._days > dueQuick) return false;
+  for (const f of FACETS) {
+    if (f.key === skipKey || !sel[f.key].size) continue;
+    const vals = valuesOf(f, r);
+    if (f.mode === "all" ? ![...sel[f.key]].every(s => vals.includes(s)) : !vals.some(v => sel[f.key].has(v))) return false;
+  }
+  return true;
+}
+
+function orderOpts(f, entries) {
+  if (f.order === "alpha") return entries.sort((a,b) => a[0].localeCompare(b[0]));
+  if (f.order === "date") return entries.sort((a,b) => parseD(a[0]) - parseD(b[0]));
+  if (f.order === "datedesc") return entries.sort((a,b) => parseD(b[0]) - parseD(a[0]));
+  if (Array.isArray(f.order)) return entries.sort((a,b) => f.order.indexOf(a[0]) - f.order.indexOf(b[0]));
+  return entries.sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+function renderFacets() {
+  const html = FACETS.map(f => {
+    const counts = {};
+    DATA.forEach(r => { if (passes(r, f.key)) valuesOf(f, r).forEach(v => counts[v] = (counts[v] || 0) + 1); });
+    sel[f.key].forEach(v => { if (!(v in counts)) counts[v] = 0; });
+    const term = (document.querySelector(`[data-fs="${f.key}"]`)?.value || "").toLowerCase();
+    const label = f.label || (v => v);
+    let opts = orderOpts(f, Object.entries(counts)).filter(([v]) => !term || label(v).toLowerCase().includes(term));
+    const isOpen = facetOpen[f.key] ?? !!f.open;
+    const letters = f.az ? new Set(opts.map(([v]) => v[0].toUpperCase())) : null;
+    const list = opts.map(([v,n]) => `
+      <label class="opt ${n ? "" : "zero"}" data-letter="${esc(v[0].toUpperCase())}">
+        <input type="checkbox" data-k="${f.key}" value="${esc(v)}" ${sel[f.key].has(v) ? "checked" : ""}>
+        <span class="lbl" title="${esc(label(v))}">${esc(label(v))}</span>
+        ${f.addToShop && /^\d{4}$/.test(v) && !shop.fsc.includes(v) ? `<button class="add" data-addfsc="${v}" title="Add to my shop">+ shop</button>` : ""}
+        <span class="n">${n}</span>
+      </label>`).join("") || `<div class="sub" style="padding:4px">No options</div>`;
+    const quick = f.quick ? `<div class="quick">${[[null,"Any"],[3,"≤ 3 days"],[7,"≤ 7 days"],[14,"≤ 14 days"]].map(([v,l]) => `<button data-due="${v}" class="${dueQuick === v ? "on" : ""}">${l}</button>`).join("")}</div>` : "";
+    return `<details class="card facet" data-facet="${f.key}" ${isOpen ? "open" : ""}>
+      <summary>${f.title} ${sel[f.key].size ? `<span class="selcount">${sel[f.key].size}</span> <a class="clr" data-clear="${f.key}">clear</a>` : ""}
+        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></summary>
+      <div class="fbody">${quick}
+        ${f.search ? `<input class="fsearch" data-fs="${f.key}" placeholder="Search ${f.title.toLowerCase()}…" value="${esc(term)}">` : ""}
+        <div class="azwrap">
+          ${letters ? `<div class="az">${"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(L => `<span class="${letters.has(L) ? "has" : ""}" data-az="${L}" data-azk="${f.key}">${L}</span>`).join("")}</div>` : ""}
+          <div class="optlist" id="ol-${f.key}">${list}</div>
+        </div>
+      </div>
+    </details>`;
+  }).join("");
+  // Keep focus and scroll position in facet search boxes while re-rendering.
+  const active = document.activeElement?.dataset?.fs, caret = document.activeElement?.selectionStart;
+  const scrolls = {}; document.querySelectorAll(".optlist").forEach(el => scrolls[el.id] = el.scrollTop);
+  $("facets").innerHTML = html;
+  Object.entries(scrolls).forEach(([id, t]) => { const el = $(id); if (el) el.scrollTop = t; });
+  if (active) { const el = document.querySelector(`[data-fs="${active}"]`); el.focus(); el.setSelectionRange(caret, caret); }
+}
+
+/* ---------- Shop matching: repeat part > category > keyword ---------- */
+function readShop() {
+  shop.fsc = [...new Set($("shopFsc").value.split(/[\s,]+/).map(s => s.replace(/\D/g, "")).filter(s => s.length === 4))];
+  shop.nsn = $("shopNsn").value.split(/[\n,]+/).map(s => s.replace(/\D/g, "")).filter(s => s.length >= 9);
+  shop.kw = $("shopKw").value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+  store.set("shop", { f:$("shopFsc").value, n:$("shopNsn").value, k:$("shopKw").value });
+  $("fscChips").innerHTML = shop.fsc.map(c => `<span class="chip">${c} · ${esc(FSG[c.slice(0,2)] || "")}<button data-rmfsc="${c}" title="Remove">×</button></span>`).join("");
+}
+function fit(r) {
+  const reasons = []; let score = 0;
+  if (shop.nsn.some(n => r._digits && (r._digits === n || r._digits.endsWith(n)))) { score += 100; reasons.push(["b-nsn", "Repeat part"]); }
+  if (r.fsc && shop.fsc.includes(r.fsc)) { score += 50; reasons.push(["b-fsc", "FSC " + r.fsc]); }
+  const name = r.nomenclature.toLowerCase();
+  const kw = shop.kw.find(k => name.includes(k));
+  if (kw) { score += 25; reasons.push(["b-kw", "“" + kw + "”"]); }
+  return { score, reasons };
+}
+
+/* ---------- Main render ---------- */
+const SORTS = {
+  fit:   ["Best fit, then soonest due", (a,b) => b._fit.score - a._fit.score || a._days - b._days],
+  due:   ["Due soonest",               (a,b) => a._days - b._days || b._fit.score - a._fit.score],
+  qtyd:  ["Quantity, largest first",   (a,b) => (b.qty || 0) - (a.qty || 0)],
+  qtya:  ["Quantity, smallest first",  (a,b) => (a.qty || 0) - (b.qty || 0)],
+  item:  ["Item name A–Z",             (a,b) => a.nomenclature.localeCompare(b.nomenclature)],
+  newest:["Newest issued",             (a,b) => parseD(b.issued) - parseD(a.issued) || a._days - b._days],
+};
+
+function render() {
+  readShop();
+  DATA.forEach(r => r._fit = fit(r));
+  renderFacets();
+  const rows = DATA.filter(r => passes(r)).sort(SORTS[sortKey][1]);
+  window._rows = rows;
+
+  const fits = DATA.filter(r => r._fit.score > 0 && !passed.has(r._key));
+  const tabs = [["for","For my shop",fits.length],["all","All RFQs",DATA.filter(r => !passed.has(r._key)).length],["star","Shortlist",starred.size],["passed","Passed",passed.size]];
+  $("tabs").innerHTML = tabs.map(([k,l,n]) => `<button data-view="${k}" class="${view === k ? "on" : ""}">${l}<span class="n">${n}</span></button>`).join("");
+
+  const stat = (n, label, act, hl) => `<button class="stat ${hl ? "hl" : ""}" data-stat="${act}"><b>${n.toLocaleString()}</b><span>${label}</span></button>`;
+  $("stats").innerHTML =
+    stat(DATA.length, `RFQs · ${ISSUE_TEXT}`, "all") +
+    stat(fits.length, "fit my shop", "for", true) +
+    stat(fits.filter(r => r._fit.reasons.some(x => x[0] === "b-nsn")).length, "repeat parts I've supplied", "repeat") +
+    stat(fits.filter(r => r._days >= 0 && r._days <= 7).length, "of my fits due in 7 days", "due7") +
+    stat(DATA.filter(r => /set-aside/i.test(r.set_aside)).length, "set aside for small business", "sb");
+
+  // Active filter chips
+  const chips = [];
+  if ($("q").value.trim()) chips.push(["q", "", "Search", $("q").value.trim()]);
+  if (dueQuick != null) chips.push(["dueq", "", "Due", "≤ " + dueQuick + " days"]);
+  FACETS.forEach(f => sel[f.key].forEach(v => chips.push(["f", f.key, f.title, (f.label || (x => x))(v), v])));
+  $("toolbar").innerHTML = `<span class="count">${rows.length.toLocaleString()} ${rows.length === 1 ? "solicitation" : "solicitations"}</span>
+    ${chips.map(([t,k,title,label,v]) => `<span class="achip"><b>${esc(title)}:</b> ${esc(label)}<button data-rm="${t}" data-k="${k}" data-v="${esc(v ?? "")}" title="Remove">×</button></span>`).join("")}
+    ${chips.length ? `<button class="clearall" id="clearAll">Clear all</button>` : ""}
+    <span class="spacer"></span>
+    <label class="sub">Sort</label><select id="sort">${Object.entries(SORTS).map(([k,[l]]) => `<option value="${k}" ${k === sortKey ? "selected" : ""}>${l}</option>`).join("")}</select>`;
+
+  if (!rows.length) {
+    const msg = view === "for" && !fits.length
+      ? `<h3>Tell us what you supply</h3>Add an FSC code, a past NSN or a keyword under <b>My shop</b>, or hover any FSC in the filters and click <b>+ shop</b>.`
+      : view === "star" ? `<h3>No shortlisted RFQs yet</h3>Click ☆ on any row to save it here.`
+      : view === "passed" ? `<h3>Nothing passed</h3>Click ✕ on a row to hide RFQs you won't quote.`
+      : `<h3>No solicitations match</h3>Try removing a filter, or <a href="#" data-clearall>clear all filters</a>.`;
+    $("results").innerHTML = `<div class="empty">${msg}</div>`;
+    return;
+  }
+  $("results").innerHTML = `<table><thead><tr>
+      <th>Why it fits</th><th>Item</th><th class="col-hide">NSN</th><th>Solicitation</th>
+      <th class="col-hide">Qty</th><th class="col-hide">Set-aside</th><th>Due</th><th></th></tr></thead><tbody>
+    ${rows.slice(0, shown).map(r => `<tr data-key="${esc(r._key)}" class="${passed.has(r._key) ? "passed" : ""}">
+      <td>${r._fit.reasons.map(([c,t]) => `<span class="badge ${c}">${esc(t)}</span>`).join("") || `<span class="sub">—</span>`}
+          ${MULTI && r.issued === LATEST ? `<span class="badge b-new">New</span>` : ""}</td>
+      <td><div class="item">${esc(r.nomenclature)}</div><div class="sub">${esc(r._group)}</div></td>
+      <td class="mono col-hide"><a href="${esc(r.nsn_url)}" target="_blank" rel="noopener" title="NSN history on DIBBS">${esc(r.nsn)}</a>${r.milspec ? `<div class="sub">Mil-Spec</div>` : ""}</td>
+      <td class="mono"><a href="${esc(r.dibbs_url)}" target="_blank" rel="noopener" title="Open on DIBBS">${esc(r.solicitation)} ↗</a><div class="sub">${esc(r._office.split(" · ")[1] || r._office)}</div></td>
+      <td class="col-hide" style="font-variant-numeric:tabular-nums">${r.qty != null ? r.qty.toLocaleString() : "—"}</td>
+      <td class="col-hide">${/set-aside/i.test(r.set_aside) ? `<span class="badge b-sb">${esc(r.set_aside.replace(" Set-Aside","").replace(/ \(.*\)/,""))}</span>` : `<span class="sub">Unrestricted</span>`}
+          ${r.fast_award ? `<div class="sub" title="Micro-purchase quotes may be awarded before the return date">⚡ Fast Award</div>` : ""}</td>
+      <td><div class="due ${r._days <= 3 ? "hot" : r._days <= 7 ? "warn" : ""}">${r._days < 0 ? "Closed" : r._days === 0 ? "Today" : r._days + "d"}</div><div class="sub">${nice(r.return_by)}</div></td>
+      <td class="acts"><button class="iconbtn star ${starred.has(r._key) ? "on" : ""}" data-star title="Shortlist">${starred.has(r._key) ? "★" : "☆"}</button><button class="iconbtn pass ${passed.has(r._key) ? "on" : ""}" data-pass title="${passed.has(r._key) ? "Restore" : "Pass (hide)"}">✕</button></td>
+    </tr>`).join("")}</tbody></table>
+    ${rows.length > shown ? `<button class="ghost more" id="more">Show ${Math.min(200, rows.length - shown)} more · ${rows.length - shown} left</button>` : ""}`;
+  if (openKey) openDrawer(openKey);
+}
+
+/* ---------- Detail drawer ---------- */
+function openDrawer(key) {
+  const r = DATA.find(x => x._key === key); if (!r) return;
+  openKey = key;
+  const sibs = DATA.filter(x => x._digits && x._digits === r._digits && x._key !== r._key);
+  $("drawer").innerHTML = `<div class="dhead">
+      <button class="iconbtn dclose" id="dclose" title="Close">✕</button>
+      <div class="sub mono">${esc(r.solicitation)}</div>
+      <h2>${esc(r.nomenclature)}</h2>
+      ${r._fit.reasons.map(([c,t]) => `<span class="badge ${c}">${esc(t)}</span>`).join("")}
+      ${/set-aside/i.test(r.set_aside) ? `<span class="badge b-sb">${esc(r.set_aside)}</span>` : ""}
+      ${r.fast_award ? `<span class="badge b-grey">⚡ Fast Award candidate</span>` : ""}
+    </div>
+    <div class="dbody">
+      <div class="dbtns">
+        <a class="primary" href="${esc(r.dibbs_url)}" target="_blank" rel="noopener">Open on DIBBS ↗</a>
+        <a class="ghost" href="${esc(r.pdf_url)}" target="_blank" rel="noopener">RFQ PDF</a>
+        ${r.tech_docs_url ? `<a class="ghost" href="${esc(r.tech_docs_url)}" target="_blank" rel="noopener">Tech docs</a>` : ""}
+        <a class="ghost" href="${esc(r.nsn_url)}" target="_blank" rel="noopener">NSN history</a>
+      </div>
+      <dl class="kv">
+        <dt>Due</dt><dd><b>${nice(r.return_by)}</b> · ${r._days < 0 ? "closed" : r._days === 0 ? "today" : r._days + " days left"}</dd>
+        <dt>Issued</dt><dd>${nice(r.issued)}</dd>
+        <dt>NSN</dt><dd class="mono">${esc(r.nsn)}${r.milspec ? " · Mil-Spec" : ""}</dd>
+        <dt>FSC class</dt><dd>${esc(r.fsc || "—")} · ${esc(r._group)}</dd>
+        <dt>Quantity</dt><dd>${r.qty != null ? r.qty.toLocaleString() : "Not stated"}</dd>
+        <dt>Buying office</dt><dd>${esc(r._office)}</dd>
+        <dt>Solicitation type</dt><dd>${esc(r._type)}</dd>
+        <dt>Set-aside</dt><dd>${esc(r.set_aside || "Not stated")}</dd>
+        <dt>Purchase request</dt><dd class="mono">${esc(r.purchase_request)}</dd>
+        <dt>Part origin</dt><dd>${esc(r._origin)}</dd>
+        <dt>Status</dt><dd>${esc(r.status)}</dd>
+      </dl>
+      <div class="dbtns">
+        <button class="ghost" data-star>${starred.has(r._key) ? "★ Shortlisted" : "☆ Shortlist"}</button>
+        <button class="ghost" data-pass>${passed.has(r._key) ? "Restore" : "✕ Pass"}</button>
+        ${r.fsc && !shop.fsc.includes(r.fsc) ? `<button class="ghost" data-addfsc="${r.fsc}">+ Track FSC ${r.fsc}</button>` : ""}
+        ${r._digits && !shop.nsn.includes(r._digits) ? `<button class="ghost" data-addnsn="${r._digits}">+ I've supplied this NSN</button>` : ""}
+      </div>
+      ${sibs.length ? `<div class="dsec">Same NSN on ${sibs.length} other solicitation${sibs.length > 1 ? "s" : ""}</div>
+        ${sibs.map(s => `<div class="sib"><a href="#" data-open="${esc(s._key)}" class="mono">${esc(s.solicitation)}</a><span class="sub">Qty ${s.qty ?? "—"} · due ${nice(s.return_by)}</span></div>`).join("")}` : ""}
+    </div>`;
+  document.body.classList.add("drawer-open");
+}
+function closeDrawer() { openKey = null; document.body.classList.remove("drawer-open"); }
+
+/* ---------- Actions ---------- */
+function toggle(set, key, name) { set.has(key) ? set.delete(key) : set.add(key); store.set(name, [...set]); }
+function addFsc(c) { if (!shop.fsc.includes(c)) { $("shopFsc").value = [...shop.fsc, c].join(", "); } }
+function exportCsv() {
+  const cols = [["Solicitation","solicitation"],["NSN","nsn"],["Item","nomenclature"],["FSC","fsc"],["Qty","qty"],["Set-aside","set_aside"],["Issued","issued"],["Return by","return_by"],["Buying office","_office"],["Fit", r => r._fit.reasons.map(x => x[1]).join("; ")],["DIBBS link","dibbs_url"],["RFQ PDF","pdf_url"]];
+  const q = v => `"${String(v ?? "").replace(/"/g,'""')}"`;
+  const csv = [cols.map(c => q(c[0])).join(",")].concat(window._rows.map(r => cols.map(([,k]) => q(typeof k === "function" ? k(r) : r[k])).join(","))).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type:"text/csv" }));
+  a.download = `dibbs-rfqs-${view}.csv`; a.click();
+}
+
+let tmr; const soon = () => { clearTimeout(tmr); tmr = setTimeout(() => { shown = 100; render(); }, 120); };
+$("q").addEventListener("input", soon);
+["shopFsc","shopNsn","shopKw"].forEach(id => $(id).addEventListener("input", soon));
+$("csv").onclick = exportCsv;
+$("scrim").onclick = closeDrawer;
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeDrawer();
+  if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") { e.preventDefault(); $("q").focus(); }
+});
+document.addEventListener("input", e => { if (e.target.dataset.fs) renderFacets(); });
+document.addEventListener("change", e => {
+  const k = e.target.dataset.k;
+  if (k && e.target.type === "checkbox") { e.target.checked ? sel[k].add(e.target.value) : sel[k].delete(e.target.value); shown = 100; render(); }
+  if (e.target.id === "sort") { sortKey = e.target.value; render(); }
+});
+document.addEventListener("toggle", e => { const f = e.target.dataset?.facet; if (f) { facetOpen[f] = e.target.open; store.set("facetOpen", facetOpen); } }, true);
+document.addEventListener("click", e => {
+  const t = e.target, d = t.closest("[data-view],[data-stat],[data-clear],[data-due],[data-az],[data-rm],[data-addfsc],[data-addnsn],[data-rmfsc],[data-star],[data-pass],[data-open],[data-clearall],#clearAll,#more,#dclose,tbody tr");
+  if (!d) return;
+  if (d.dataset.view) { view = d.dataset.view; shown = 100; render(); return; }
+  if (d.dataset.stat) {
+    const s = d.dataset.stat;
+    if (s === "all") view = "all"; else if (s === "for") view = "for";
+    else if (s === "repeat") { view = "for"; sortKey = "fit"; }
+    else if (s === "due7") { view = "for"; dueQuick = 7; }
+    else if (s === "sb") { view = "all"; DATA.forEach(r => { if (/set-aside/i.test(r.set_aside)) sel.setaside.add(r.set_aside); }); }
+    shown = 100; render(); return;
+  }
+  if (d.dataset.clear) { e.preventDefault(); sel[d.dataset.clear].clear(); if (d.dataset.clear === "due") dueQuick = null; render(); return; }
+  if (d.dataset.due !== undefined) { dueQuick = d.dataset.due === "null" ? null : Number(d.dataset.due); render(); return; }
+  if (d.dataset.az) { const el = document.querySelector(`#ol-${d.dataset.azk} [data-letter="${d.dataset.az}"]`); if (el) el.parentElement.scrollTop = el.offsetTop - el.parentElement.offsetTop; return; }
+  if (d.dataset.rm) { const k = d.dataset.rm; if (k === "q") $("q").value = ""; else if (k === "dueq") dueQuick = null; else sel[d.dataset.k].delete(d.dataset.v); render(); return; }
+  if (d.dataset.addfsc) { e.preventDefault(); e.stopPropagation(); addFsc(d.dataset.addfsc); render(); return; }
+  if (d.dataset.addnsn) { $("shopNsn").value = ($("shopNsn").value.trim() + "\n" + d.dataset.addnsn).trim(); render(); return; }
+  if (d.dataset.rmfsc) { $("shopFsc").value = shop.fsc.filter(c => c !== d.dataset.rmfsc).join(", "); render(); return; }
+  if (d.dataset.clearall !== undefined || d.id === "clearAll") { e.preventDefault(); FACETS.forEach(f => sel[f.key].clear()); dueQuick = null; $("q").value = ""; render(); return; }
+  if (d.id === "more") { shown += 200; render(); return; }
+  if (d.id === "dclose") { closeDrawer(); return; }
+  if (d.dataset.open) { e.preventDefault(); openDrawer(d.dataset.open); return; }
+  const key = d.dataset.star !== undefined || d.dataset.pass !== undefined ? (t.closest("tr")?.dataset.key || openKey) : null;
+  if (d.dataset.star !== undefined) { e.stopPropagation(); toggle(starred, key, "starred"); render(); return; }
+  if (d.dataset.pass !== undefined) { e.stopPropagation(); toggle(passed, key, "passed"); render(); return; }
+  if (d.matches("tbody tr") && !t.closest("a")) openDrawer(d.dataset.key);
+});
+
+/* ---------- Load ---------- */
+const setHH = () => document.documentElement.style.setProperty("--hh", document.querySelector("header").offsetHeight + "px");
+setHH(); window.addEventListener("resize", setHH);
+let ISSUE_TEXT = "";
+fetch("data/rfqs.json").then(r => r.json()).then(d => {
+  const dates = d.issue_dates || [d.issue_date];
+  MULTI = dates.length > 1;
+  LATEST = dates.slice().sort((a,b) => parseD(b) - parseD(a))[0];
+  ISSUE_TEXT = dates.length > 1 ? `issued ${nice(dates[dates.length-1])}–${nice(LATEST)}` : `issued ${nice(LATEST)}`;
+  $("meta").textContent = `${d.rows.length.toLocaleString()} DIBBS RFQs · pulled ${d.pulled_at}`;
+  const nsnCount = {};
+  d.rows.forEach(r => { const k = r.nsn.replace(/\D/g, ""); if (k) nsnCount[k] = (nsnCount[k] || 0) + 1; });
+  DATA = d.rows.map(r => enrich(r, nsnCount));
+  // First visit: a demo shop built from real categories in today's data.
+  const s = store.get("shop", null) || { f:"5330, 4730, 5306, 4820", n:"", k:"gasket, valve, o-ring" };
+  $("shopFsc").value = s.f; $("shopNsn").value = s.n; $("shopKw").value = s.k;
+  render();
+}).catch(() => { $("results").innerHTML = `<div class="empty"><h3>No data yet</h3>Run <code>scrape.py</code> to pull RFQs from DIBBS.</div>`; });
+</script>
+</body>
+</html>

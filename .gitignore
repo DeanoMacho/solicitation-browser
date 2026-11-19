@@ -1,0 +1,4 @@
+.venv/
+__pycache__/
+data/scrape.log
+.DS_Store
