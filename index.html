@@ -50,9 +50,12 @@
   .fbody { padding:0 12px 12px; }
   .fsearch { width:100%; padding:7px 9px; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:13px; margin-bottom:6px; outline:none; }
   .fsearch:focus { border-color:var(--accent); }
-  .azwrap { display:flex; gap:6px; }
-  .az { display:flex; flex-direction:column; font-size:10px; line-height:1.35; color:var(--faint); user-select:none; }
-  .az span { cursor:default; padding:0 2px; text-align:center; }
+  .azwrap { position:relative; }
+  .azwrap.has-az { padding-left:20px; }
+  /* The A–Z index is pinned to the list's height, so it never makes the card taller than the list. */
+  .az { position:absolute; left:0; top:0; bottom:0; width:14px; display:flex; flex-direction:column; font-size:10px; line-height:1; color:var(--faint); user-select:none; }
+  .az span { flex:1 1 0; min-height:0; max-height:22px; display:flex; align-items:center; justify-content:center; cursor:default; border-radius:3px; }
+  .az span.has:hover { background:var(--accent-soft); }
   .az span.has { color:var(--accent); cursor:pointer; font-weight:600; }
   .optlist { max-height:250px; overflow:auto; flex:1; }
   .opt { display:flex; align-items:center; gap:8px; padding:4px 4px; font-size:13px; border-radius:6px; cursor:pointer; color:var(--ink2); }
@@ -315,8 +318,8 @@ function renderFacets() {
         <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></summary>
       <div class="fbody">${quick}
         ${f.search ? `<input class="fsearch" data-fs="${f.key}" placeholder="Search ${f.title.toLowerCase()}…" value="${esc(term)}">` : ""}
-        <div class="azwrap">
-          ${letters ? `<div class="az">${"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(L => `<span class="${letters.has(L) ? "has" : ""}" data-az="${L}" data-azk="${f.key}">${L}</span>`).join("")}</div>` : ""}
+        <div class="azwrap ${letters && letters.size ? "has-az" : ""}">
+          ${letters && letters.size ? `<div class="az">${[...letters].sort().map(L => `<span class="has" data-az="${esc(L)}" data-azk="${f.key}" title="Jump to ${esc(L)}">${esc(L)}</span>`).join("")}</div>` : ""}
           <div class="optlist" id="ol-${f.key}">${list}</div>
         </div>
       </div>
