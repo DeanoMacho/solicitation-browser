@@ -155,6 +155,44 @@
   .dsec { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600; margin:18px 0 8px; }
   .sib { display:flex; justify-content:space-between; padding:8px 10px; border:1px solid var(--line); border-radius:8px; margin-bottom:6px; font-size:13px; }
 
+  /* ---------- Theme: navy + brass ---------- */
+  :root { --navy:#0f1d33; --brass:#b8913a; --brass2:#e2c27a; }
+  header { background:var(--navy); border-bottom:1px solid #0a1424; backdrop-filter:none; }
+  .brand h1 { color:#fff; letter-spacing:-.01em; }
+  .brand .meta { color:#94a3b8; }
+  .logo { background:linear-gradient(135deg,var(--brass),var(--brass2)); color:var(--navy); box-shadow:inset 0 0 0 1px rgba(255,255,255,.25); }
+  #q { border-color:transparent; }
+  #q:focus { border-color:var(--brass2); box-shadow:0 0 0 3px rgba(226,194,122,.35); }
+  .tabs { background:rgba(255,255,255,.08); }
+  .tabs button { color:#cbd5e1; }
+  .tabs button.on { background:#fff; color:var(--navy); }
+  .tabs .n { color:#94a3b8; }
+  .tabs button.on .n { color:var(--muted); }
+  header .ghost { background:transparent; color:#e5e7eb; border-color:rgba(255,255,255,.22); }
+  header .ghost:hover { border-color:rgba(255,255,255,.45); }
+  .facet .selcount { background:var(--navy); }
+  .primary { background:var(--navy); }
+  .stat.hl { background:var(--navy); border-color:var(--navy); }
+  .stat.hl b { color:var(--brass2); } .stat.hl span { color:#cbd5e1; }
+  /* Briefing line */
+  .brief { display:flex; align-items:center; flex-wrap:wrap; gap:10px; font-size:15px; color:var(--ink); margin:2px 0 14px; }
+  .brief .dot { width:8px; height:8px; border-radius:50%; background:var(--brass); box-shadow:0 0 0 4px rgba(184,145,58,.18); flex:none; }
+  .brief b { font-weight:700; }
+  .brief .sep { color:var(--faint); margin:0 2px; }
+  /* Due pills: urgency at a glance */
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .pill i { width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .p-hot { background:#fdecec; color:#b42318; } .p-warn { background:#fff4e0; color:#b54708; }
+  .p-ok { background:#f2f4f7; color:#475467; } .p-closed { background:#f2f4f7; color:#98a2b3; }
+  /* A repeat part is the strongest signal, so it gets the strongest badge */
+  .b-nsn { background:#067647; color:#fff; }
+  /* Calmer table */
+  thead th { padding:10px 14px; }
+  tbody td { padding:13px 14px; }
+  th.num, td.num { text-align:right; }
+  tbody tr:hover td { background:#f7f9fc; }
+  a.solchip { display:inline-block; background:#f5f6f8; border:1px solid var(--line); border-radius:6px; padding:1px 7px; color:var(--navy); }
+  a.solchip:hover { text-decoration:none; border-color:#b6c2d6; background:#fff; }
   @media (prefers-reduced-motion: reduce) {
     .drawer, body.drawer-open .drawer { transform:none; transition:opacity 200ms ease; }
     .drawer { opacity:0; pointer-events:none; } body.drawer-open .drawer { opacity:1; pointer-events:auto; }
@@ -199,6 +237,7 @@
   </aside>
 
   <section>
+    <div class="brief" id="brief"></div>
     <div class="stats" id="stats"></div>
     <div class="toolbar" id="toolbar"></div>
     <div class="tablewrap" id="results"></div>
@@ -357,7 +396,7 @@ function readShop() {
 }
 function fit(r) {
   const reasons = []; let score = 0;
-  if (shop.nsn.some(n => r._digits && (r._digits === n || r._digits.endsWith(n)))) { score += 100; reasons.push(["b-nsn", "Repeat part"]); }
+  if (shop.nsn.some(n => r._digits && (r._digits === n || r._digits.endsWith(n)))) { score += 100; reasons.push(["b-nsn", "★ Repeat part"]); }
   if (r.fsc && shop.fsc.includes(r.fsc)) { score += 50; reasons.push(["b-fsc", "FSC " + r.fsc]); }
   const name = r.nomenclature.toLowerCase();
   const kw = shop.kw.find(k => name.includes(k));
@@ -394,6 +433,19 @@ function render() {
     stat(fits.filter(r => r._days >= 0 && r._days <= 7).length, "of my fits due in 7 days", "due7") +
     stat(DATA.filter(r => /set-aside/i.test(r.set_aside)).length, "set aside for small business", "sb");
 
+  // One-line briefing: reads like a morning report, not a spreadsheet.
+  const closing = fits.filter(r => r._days >= 0 && r._days <= 7).length;
+  const rep = fits.filter(r => r._fit.reasons.some(x => x[0] === "b-nsn")).length;
+  const fresh = MULTI ? fits.filter(r => r.issued === LATEST).length : 0;
+  const hr = new Date().getHours();
+  const hello = hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
+  const parts = fits.length
+    ? [`<b>${fits.length.toLocaleString()}</b> RFQs fit your shop`, `<b>${closing}</b> close within 7 days`]
+        .concat(rep ? [`<b>${rep}</b> ${rep === 1 ? "is a repeat part" : "are repeat parts"} you've supplied`] : [])
+        .concat(fresh ? [`<b>${fresh}</b> new today`] : [])
+    : ["add what you supply under <b>My shop</b> to see your matches"];
+  $("brief").innerHTML = `<span class="dot"></span><span>${hello}: ${parts.join(' <span class="sep">·</span> ')}</span>`;
+
   // Active filter chips
   const chips = [];
   if ($("q").value.trim()) chips.push(["q", "", "Search", $("q").value.trim()]);
@@ -416,17 +468,17 @@ function render() {
   }
   $("results").innerHTML = `<table><thead><tr>
       <th>Why it fits</th><th>Item</th><th class="col-hide">NSN</th><th>Solicitation</th>
-      <th class="col-hide">Qty</th><th class="col-hide">Set-aside</th><th>Due</th><th></th></tr></thead><tbody>
+      <th class="col-hide num">Qty</th><th class="col-hide">Set-aside</th><th>Due</th><th></th></tr></thead><tbody>
     ${rows.slice(0, shown).map(r => `<tr data-key="${esc(r._key)}" class="${passed.has(r._key) ? "passed" : ""}">
       <td>${r._fit.reasons.map(([c,t]) => `<span class="badge ${c}">${esc(t)}</span>`).join("") || `<span class="sub">—</span>`}
           ${MULTI && r.issued === LATEST ? `<span class="badge b-new">New</span>` : ""}</td>
       <td><div class="item">${esc(r.nomenclature)}</div><div class="sub">${esc(r._group)}</div></td>
       <td class="mono col-hide"><a href="${esc(r.nsn_url)}" target="_blank" rel="noopener" title="NSN history on DIBBS">${esc(r.nsn)}</a>${r.milspec ? `<div class="sub">Mil-Spec</div>` : ""}</td>
-      <td class="mono"><a href="${esc(r.dibbs_url)}" target="_blank" rel="noopener" title="Open on DIBBS">${esc(r.solicitation)} ↗</a><div class="sub">${esc(r._office.split(" · ")[1] || r._office)}</div></td>
-      <td class="col-hide" style="font-variant-numeric:tabular-nums">${r.qty != null ? r.qty.toLocaleString() : "—"}</td>
+      <td class="mono"><a class="solchip" href="${esc(r.dibbs_url)}" target="_blank" rel="noopener" title="Open on DIBBS">${esc(r.solicitation)} ↗</a><div class="sub">${esc(r._office.split(" · ")[1] || r._office)}</div></td>
+      <td class="col-hide num" style="font-variant-numeric:tabular-nums">${r.qty != null ? r.qty.toLocaleString() : "—"}</td>
       <td class="col-hide">${/set-aside/i.test(r.set_aside) ? `<span class="badge b-sb">${esc(r.set_aside.replace(" Set-Aside","").replace(/ \(.*\)/,""))}</span>` : `<span class="sub">Unrestricted</span>`}
           ${r.fast_award ? `<div class="sub" title="Micro-purchase quotes may be awarded before the return date">⚡ Fast Award</div>` : ""}</td>
-      <td><div class="due ${r._days <= 3 ? "hot" : r._days <= 7 ? "warn" : ""}">${r._days < 0 ? "Closed" : r._days === 0 ? "Today" : r._days + "d"}</div><div class="sub">${nice(r.return_by)}</div></td>
+      <td><span class="pill ${r._days < 0 ? "p-closed" : r._days <= 3 ? "p-hot" : r._days <= 7 ? "p-warn" : "p-ok"}"><i></i>${r._days < 0 ? "Closed" : r._days === 0 ? "Today" : r._days === 1 ? "1 day" : r._days + " days"}</span><div class="sub" style="margin-top:4px">${nice(r.return_by)}</div></td>
       <td class="acts"><button class="iconbtn star ${starred.has(r._key) ? "on" : ""}" data-star title="Shortlist">${starred.has(r._key) ? "★" : "☆"}</button><button class="iconbtn pass ${passed.has(r._key) ? "on" : ""}" data-pass title="${passed.has(r._key) ? "Restore" : "Pass (hide)"}">✕</button></td>
     </tr>`).join("")}</tbody></table>
     ${rows.length > shown ? `<button class="ghost more" id="more">Show ${Math.min(200, rows.length - shown)} more · ${rows.length - shown} left</button>` : ""}`;
